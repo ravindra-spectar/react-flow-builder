@@ -24,6 +24,7 @@ import "reactflow/dist/base.css";
 import "../tailwind.config.js";
 import Sidebar from "./component/sidebar";
 import TextNode from "./component/TextNode";
+import ImageNode from "./component/ImageNode.js";
 
 // Key for local storage
 const flowKey = "flow-key";
@@ -48,19 +49,28 @@ const App = () => {
   const nodeTypes = useMemo(
     () => ({
       textnode: TextNode,
+      imagenode: ImageNode,
+
     }),
     []
   );
 
-  // States and hooks setup
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [selectedElements, setSelectedElements] = useState([]);
   const [nodeName, setNodeName] = useState("");
+  const [imageUrlNode, setImageURLNode] = useState("")
 
   // Update nodes data when nodeName or selectedElements changes
+
+  console.log("imageUrlNode", imageUrlNode);
+  
+  console.log("nodes====", nodes);
+  
+
+
   useEffect(() => {
     if (selectedElements.length > 0) {
       setNodes((nds) =>
@@ -75,14 +85,31 @@ const App = () => {
         })
       );
     } else {
-      setNodeName(""); // Clear nodeName when no node is selected
+      setNodeName(""); 
     }
   }, [nodeName, selectedElements, setNodes]);
 
-  // Handle node click
+
   const onNodeClick = useCallback((event, node) => {
+    console.log("node----", node);
+  console.log("imageUrlNode", imageUrlNode);
+  
     setSelectedElements([node]);
     setNodeName(node.data.label);
+
+    // if (node.type === "imagenode") {
+    //   const updatedData = { ...node.data, imageUrl: imageUrlNode || '' };
+    //   updateNodeData(node.id, updatedData);
+    // }
+
+    if (node.type === "imagenode") {
+      setImageURLNode(node.data.imageUrl || ""); // Pre-fill current image URL
+    }
+
+    // if (node.type === "imagenode") {
+    //   setImageURLNode(imageUrlNode); // Pre-fill current image URL
+    // }
+  
     setNodes((nodes) =>
       nodes.map((n) => ({
         ...n,
@@ -90,6 +117,7 @@ const App = () => {
       }))
     );
   }, []);
+  
 
   // Setup viewport
   const { setViewport } = useReactFlow();
@@ -128,6 +156,8 @@ const App = () => {
         );
       } else {
         const flow = reactFlowInstance.toObject();
+        console.log('flow----', flow);
+        
         localStorage.setItem(flowKey, JSON.stringify(flow));
         alert("Save successful!"); // Provide feedback when save is successful
       }
@@ -159,6 +189,16 @@ const App = () => {
     [setEdges]
   );
 
+// update the nodedata
+const updateNodeData = (nodeId, newData) => {
+  setNodes((nodes) =>
+    nodes.map((node) =>
+      node.id === nodeId ? { ...node, data: { ...node.data, ...newData } } : node
+    )
+  );
+};
+
+
   // Enable drop effect on drag over
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -185,13 +225,17 @@ const App = () => {
         id: getId(),
         type,
         position,
-        data: { label: `${type}` },
+        data: { 
+          label: `${type}`,
+          imageUrl: "",
+          updateNodeData
+       },
       };
 
       console.log("Node created: ", newNode);
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance]
+    [reactFlowInstance ,updateNodeData]
   );
 
   const rfStyle = {
@@ -224,7 +268,7 @@ const App = () => {
           }}
           fitView
         >
-          <Background variant="dots" gap={12} size={1} />
+          <Background variant="lines" gap={12} size={1} />
           <Controls />
           <MiniMap zoomable pannable />
           <Panel>
@@ -248,6 +292,16 @@ const App = () => {
         nodeName={nodeName}
         setNodeName={setNodeName}
         selectedNode={selectedElements[0]}
+        // setImageURLNode={setImageURLNode}
+
+        setImageURLNode={(url) => {
+          setImageURLNode(url);
+
+          if (selectedElements[0]?.type === "imagenode") {
+            updateNodeData(selectedElements[0].id, { imageUrl: url });
+          }
+        }}
+
         setSelectedElements={setSelectedElements}
       />
     </div>
